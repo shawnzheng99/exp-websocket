@@ -4,10 +4,18 @@ const server = require("http").createServer(app);
 const WebSocket = require("ws");
 const wss = new WebSocket.Server({ server: server });
 const fs = require('fs');
+const moment = require('moment');
+
+const axios = require('axios');
+const redis = require("redis");
+const redisClient = redis.createClient();
+ 
 
 let CLIENTS = [];
 let log = [];
 const logPath = __dirname + '/log.txt';
+
+
 wss.getUniqueID = function () {
     function s4() {
         return Math.floor((1 + Math.random()) * 0x10000)
@@ -29,7 +37,9 @@ wss.on("connection", function connection(ws, req) {
     ws.on('message', msg => {
         // console.log(msg)
         const convertedMsg = JSON.parse(msg);
-        const { clientId, createdAt } = convertedMsg.payload;
+        const { clientId } = convertedMsg.payload;
+
+        const createdAt = moment().local().format("YYYY-MM-DDThh:mm:ss")
 
         const logContent = `${clientId}\t|\t${createdAt}`
         
@@ -128,5 +138,29 @@ app.get("/", (req, res) => {
     res.send({ status: "OJBK" });
 });
  
+
+app.get('/cache', (req, res) => {
+    try { 
+        redisClient.exists('posts', async (err, found) => {
+            if (err) throw err;
+            if(found){
+                redisClient.get('posts', (err, posts) => {
+                    if (err) throw err;
+                    const cooked = JSON.parse(posts)
+                    res.send(cooked)
+                });
+                
+            }else{
+                const { data } = await axios.get('https://jsonplaceholder.typicode.com/posts')
+                redisClient.set('posts', JSON.stringify(data))
+                res.send(data)
+            }
+        });
+    } catch (error) {
+        console.log(error, 'something went wrong')
+        res.status(500).send(error)
+    }
+});
+
 server.listen(3000, () => console.log(`Lisening on port :3000`));
  

@@ -3,10 +3,11 @@ const app = express();
 const server = require("http").createServer(app);
 const WebSocket = require("ws");
 const wss = new WebSocket.Server({ server: server });
+const fs = require('fs');
+
 let CLIENTS = [];
-
-// TODO: add Redis
-
+let log = [];
+const logPath = __dirname + '/log.txt';
 wss.getUniqueID = function () {
     function s4() {
         return Math.floor((1 + Math.random()) * 0x10000)
@@ -23,29 +24,28 @@ const makeMsg = (type, payload) => {
     });
 };
  
-let socket = null;
-
 wss.on("connection", function connection(ws, req) {
-    // ws.id = wss.getUniqueID();
-    
-    socket = ws;
  
     ws.on('message', msg => {
         // console.log(msg)
         const convertedMsg = JSON.parse(msg);
-        const clientId = convertedMsg.payload.clientId;
+        const { clientId, createdAt } = convertedMsg.payload;
 
-
+        const logContent = `${clientId}\t|\t${createdAt}`
+        
         ws.id = clientId
         const currentTarget = CLIENTS.filter(c => c.id === clientId);
         if(currentTarget.length == 0){
             CLIENTS.push(ws);
+            log.push({ clientId, createdAt })
+            if(fs.existsSync(logPath)){
+                fs.appendFileSync(logPath, '\n' + logContent)
+            }else{
+                fs.writeFileSync(logPath, logContent)
+            }
         }
 
-        console.log(
-            "connected clients ", 
-            CLIENTS.map(c => c.id)
-        );
+        console.table(log)
         if(CLIENTS.length === 25) CLIENTS = [];
         ws.send(makeMsg("msg", `You are connected ${convertedMsg.payload.clientId}`));
         // ws.send(msg)

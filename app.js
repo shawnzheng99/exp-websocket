@@ -5,6 +5,8 @@ const WebSocket = require("ws");
 const wss = new WebSocket.Server({ server: server });
 let CLIENTS = [];
 
+// TODO: add Redis
+
 wss.getUniqueID = function () {
     function s4() {
         return Math.floor((1 + Math.random()) * 0x10000)

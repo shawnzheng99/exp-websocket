@@ -138,7 +138,7 @@ app.get("/", (req, res) => {
     res.send({ status: "OJBK" });
 });
  
-
+// api for redis, caching data
 app.get('/cache', (req, res) => {
     try { 
         redisClient.exists('posts', async (err, found) => {
